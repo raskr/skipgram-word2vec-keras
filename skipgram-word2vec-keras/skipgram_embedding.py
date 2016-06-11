@@ -4,14 +4,25 @@ from keras.layers.embeddings import Embedding
 import utils
 
 
+def batch_generator(nb_batch, b_size, vocab_size, data_pvt, data_ctx, data_lbl):
+    while 1:
+        for i in range(nb_batch):
+            begin, end = b_size*i, b_size*(i+1)
+            yield (
+                [data_pvt[begin: end],
+                 data_ctx[begin: end]],
+                data_lbl[begin: end],
+            )
+
+
 # load data
-sentences, index2word, word2index = utils.load_sentences_brown(nb_sentences=80000)
+sentences, index2word, word2index = utils.load_sentences_brown()
 
 # params
-nb_epoch = 2
+nb_epoch = 8
 batch_size = 10000
 vec_dim = 128
-window_size = 7
+window_size = 8
 vocab_size = len(index2word)
 
 # create input
@@ -23,16 +34,6 @@ assert data_pivot.shape == data_context.shape == data_label.shape
 nb_batch = len(data_pivot) // batch_size
 samples_per_epoch = batch_size * nb_batch
 
-
-def batch_generator(nb_batch, b_size, vocab_size, data_pvt, data_ctx, data_lbl):
-    while 1:
-        for i in range(nb_batch):
-            begin, end = b_size*i, b_size*(i+1)
-            yield (
-                [data_pvt[begin: end],
-                 data_ctx[begin: end]],
-                data_lbl[begin: end],
-            )
 
 # graph definition
 input_pvt = Input(batch_shape=(batch_size, 1), dtype='int32')
@@ -63,4 +64,4 @@ model.fit_generator(generator=gen,
 utils.save_weights(model, index2word, vocab_size, vec_dim)
 
 # eval using gensim
-utils.most_similar(['he'])
+utils.most_similar(positive=['she', 'him'], negative=['he'])

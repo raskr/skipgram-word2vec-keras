@@ -72,4 +72,4 @@ model.fit_generator(generator=gen,
 utils.save_weights(model, index2word, vocab_size, vec_dim)
 
 # eval using gensim
-utils.most_similar(positive=['he'])
+utils.most_similar(positive=['she', 'him'], negative=['he'])

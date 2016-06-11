@@ -1,4 +1,4 @@
-def load_sentences_brown(nb_sentences=3000):
+def load_sentences_brown(nb_sentences=None):
     """
     :param nb_sentences: Use if all brown sentences are too many
     :return: list of (list of word-id)
@@ -8,14 +8,15 @@ def load_sentences_brown(nb_sentences=3000):
     index2word = {}
     word2index = {}
     sentences = []
-    # stop_words = ['the', 'in', 'to', 'or', 'and', 'for', 'of']
+    stop_words = ['the', 'in', 'to', 'or', 'and', 'for', 'of']
 
-    for sent in brown.sents()[:nb_sentences]:
+    sents = brown.sents()[:nb_sentences] if nb_sentences else brown.sents()
+    for sent in sents:
         words = []
         for word in sent:
             word = str(word).lower()
-            # if word in stop_words:
-            #     break
+            if word in stop_words:
+                break
             if word not in word2index:
                 ind = len(word2index)
                 word2index[word] = ind
@@ -71,7 +72,7 @@ def create_input(x, y, b_size):
 
 def skip_grams(sentences, window_size, vocab_size, nb_negative_samples=6.):
     """
-    calc `keras.preprocessing.sequence#skipgrams` for each sentence
+    calc `keras.preprocessing.sequence.skipgrams` for each sentence
     and concatenate those.
 
     :param sentences: i.e. [[1, 2, 3, 4, 5], [6, 7], [2, 7], ...]
@@ -80,11 +81,14 @@ def skip_grams(sentences, window_size, vocab_size, nb_negative_samples=6.):
     import keras.preprocessing.sequence as seq
     import numpy as np
 
+    # table = seq.make_sampling_table(vocab_size)
+    table = None
+
     def sg(sentence):
         w = np.random.randint(window_size - 1) + 1
         return seq.skipgrams(sentence, vocab_size, window_size=w,
                              negative_samples=nb_negative_samples,
-                             shuffle=True)
+                             shuffle=True, sampling_table=table)
 
     # concat and flatten
     couples = []
@@ -118,5 +122,5 @@ def most_similar(positive=[], negative=[]):
     """
     from gensim import models
     vec = models.word2vec.Word2Vec.load_word2vec_format('vectors_embedding.txt', binary=False)
-    for v in vec.most_similar(positive=positive, negative=negative, topn=20):
+    for v in vec.most_similar_cosmul(positive=positive, negative=negative, topn=20):
         print(v)
