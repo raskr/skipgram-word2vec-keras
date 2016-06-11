@@ -5,79 +5,71 @@ import utils
 import numpy as np
 import theano.tensor as T
 
-# load data
-sentences, index2word, word2index = utils.load_sentences_brown(3)
 
-# params
-batch_size = 5
-sent_len = 5
-vec_dim = 100
-window_size = 5
-vocab_size = len(index2word)
-
-
-def create_input(x, y):
-    """
-    :param x: couples from output of skip_grams(). i.e. [[1, 2], [1, 3], [2, 1], ...]
-    :return: two numpy arrays. (centers, others) pair. i.e. [[1, 1, 2], [2, 3, 1]]
-    """
-    x_ = np.array(x).swapaxes(0, 1)
-    y_ = np.array(y)
-    garbage = len(y_) % batch_size
-    return x_[0][:-garbage], x_[1][:-garbage], y_[:-garbage]
-
-
-def batch_generator():
+def batch_generator(n_batch, b_size, vocab_size, data_pvt, data_ctx, data_lbl):
     while 1:
         for i in range(nb_batch):
-            pvt = data_pivot[batch_size*i: batch_size*(i+1)]
-            ctx = data_ctx[batch_size*i: batch_size*(i+1)]
-            y = labels[batch_size*i: batch_size*(i+1)].reshape(5, 1)
+            begin, end = b_size*i, b_size*(i+1)
+            pvt = data_pvt[begin: end]
+            ctx = data_ctx[begin: end]
+            lbl = data_lbl[begin: end]
 
-            # create large 2d array for pivot and context
-            pivot_dst = np.zeros((batch_size, vocab_size), dtype=np.float32)
-            ctx_dst = np.zeros((batch_size, vocab_size), dtype=np.float32)
-
+            # create large 2d array for Dense
+            pvt_dst = np.zeros((b_size, vocab_size), dtype=np.float32)
+            ctx_dst = np.zeros((b_size, vocab_size), dtype=np.float32)
             for j, (p, c) in enumerate(zip(pvt, ctx)):
-                pivot_dst[j][p] = 1.0
-                ctx_dst[j][c] = 1.0
+                pvt_dst[j][p] = 1
+                ctx_dst[j][c] = 1
 
-            yield ([pivot_dst, ctx_dst], y)
+            yield ([pvt_dst, ctx_dst], lbl)
 
+# load data
+sentences, index2word, word2index = utils.load_sentences_brown(nb_sentences=8000)
+
+# params
+nb_epoch = 2
+batch_size = 10000
+vec_dim = 128
+window_size = 7
+vocab_size = len(index2word)
 
 # create input
 couples, labels = utils.skip_grams(sentences, window_size, vocab_size)
-data_pivot, data_ctx, labels = create_input(couples, labels)
+data_pivot, data_context, data_label = utils.create_input(couples, labels, batch_size)
+assert data_pivot.shape == data_context.shape == data_label.shape
 
 # metrics
 nb_batch = len(data_pivot) // batch_size
 samples_per_epoch = batch_size * nb_batch
 
-# graph definition
-input_pivot = Input(shape=(vocab_size,))
-input_ctx = Input(shape=(vocab_size,))
+# graph definition (so slow model)
+input_pvt = Input(batch_shape=(batch_size, vocab_size,))
+input_ctx = Input(batch_shape=(batch_size, vocab_size,))
 
-embedded_pivot = Dense(input_dim=vocab_size,
-                       output_dim=vec_dim)(input_pivot)
+embedded_pvt = Dense(input_dim=vocab_size,
+                     output_dim=vec_dim)(input_pvt)
 
 embedded_ctx = Dense(input_dim=vocab_size,
                      output_dim=vec_dim)(input_ctx)
 
-merged = merge(inputs=[embedded_pivot, embedded_ctx],
-               mode=lambda a: (T.tensordot(a[0], a[1])),
+merged = merge(inputs=[embedded_pvt, embedded_ctx],
+               # mode=lambda a: (a[0]*a[1]).sum(-1).reshape((batch_size, 1)),
+               mode=lambda a: T.tensordot(a[0], a[1]),
                output_shape=(batch_size, 1))
 
 predictions = Activation('sigmoid')(merged)
 
 
 # build and train the model
-model = Model(input=[input_pivot, input_ctx], output=predictions)
+model = Model(input=[input_pvt, input_ctx], output=predictions)
 model.compile(optimizer='rmsprop', loss='mse', metrics=['accuracy'])
-model.fit_generator(generator=batch_generator(), samples_per_epoch=samples_per_epoch,
-                    nb_epoch=10, verbose=1)
+gen = batch_generator(nb_batch, batch_size, vocab_size, data_pivot, data_context, data_label)
+model.fit_generator(generator=gen,
+                    samples_per_epoch=samples_per_epoch,
+                    nb_epoch=nb_epoch, verbose=1)
 
 # save_weight
 utils.save_weights(model, index2word, vocab_size, vec_dim)
 
-# eval
-utils.similar_words_of('great')
+# eval using gensim
+utils.most_similar(positive=['he'])
