@@ -1,14 +1,17 @@
+filename = 'vectors_embedding.txt'
+
+
 def load_sentences_brown(nb_sentences=None):
     """
     :param nb_sentences: Use if all brown sentences are too many
-    :return: list of (list of word-id)
+    :return: list of (list of word-id), index2word, word2index
     """
     from nltk.corpus import brown
 
     index2word = {}
     word2index = {}
     sentences = []
-    stop_words = ['the', 'in', 'to', 'or', 'and', 'for', 'of']
+    stop_words = ['the', 'in', 'to', 'for', 'of', ',', '.', '"']
 
     sents = brown.sents()[:nb_sentences] if nb_sentences else brown.sents()
     for sent in sents:
@@ -27,47 +30,22 @@ def load_sentences_brown(nb_sentences=None):
     return sentences, index2word, word2index
 
 
-# def load_sentences_ptb(nb_sentences=2000):
-#     """
-#     :param nb_sentences: Use if all brown sentences are too many
-#     :return: list of (list of word-id)
-#     """
-#
-#     index2word = {}
-#     word2index = {}
-#     sentences = []
-#
-#     n = 0
-#     with open('ptb.train.txt') as f:
-#         for sent in f:
-#             if n > nb_sentences:
-#                 break
-#             n += 1
-#             words = []
-#             for word in sent.split():
-#                 if word == '.' or word == ',': break
-#                 if word not in word2index :
-#                     ind = len(word2index)
-#                     word2index[word] = ind
-#                     index2word[ind] = word
-#                 words.append(word2index[word])
-#             sentences.append(words)
-#     return sentences, index2word, word2index
-
-
 def create_input(x, y, b_size):
-    import numpy as np
     """
     :param x: Output from skip_grams(). i.e. [[1, 2], [1, 3], [2, 1], ...]
+    :param y: Output from skip_grams(). i.e. [ 1, 0, 1, ...]
+    :param b_size: size of one batch
     :return: Three numpy arrays. Each of them has same shape like (n,)
     """
+    import numpy as np
+
     garbage = len(x) % b_size
 
-    p = np.array(x)[:, 0][:-garbage]
-    c = np.array(x)[:, 1][:-garbage]
-    l = np.array(y)[:-garbage]
+    pivot = np.array(x)[:, 0][:-garbage]
+    ctx = np.array(x)[:, 1][:-garbage]
+    label = np.array(y)[:-garbage]
 
-    return p, c, l
+    return pivot, ctx, label
 
 
 def skip_grams(sentences, window_size, vocab_size, nb_negative_samples=6.):
@@ -76,19 +54,15 @@ def skip_grams(sentences, window_size, vocab_size, nb_negative_samples=6.):
     and concatenate those.
 
     :param sentences: i.e. [[1, 2, 3, 4, 5], [6, 7], [2, 7], ...]
-    :return: concatenated skip-grams of each sentence
+    :return: concatenated skip-grams
     """
     import keras.preprocessing.sequence as seq
     import numpy as np
 
-    # table = seq.make_sampling_table(vocab_size)
-    table = None
-
     def sg(sentence):
         w = np.random.randint(window_size - 1) + 1
         return seq.skipgrams(sentence, vocab_size, window_size=w,
-                             negative_samples=nb_negative_samples,
-                             shuffle=True, sampling_table=table)
+                             negative_samples=nb_negative_samples)
 
     # concat and flatten
     couples = []
@@ -101,9 +75,8 @@ def skip_grams(sentences, window_size, vocab_size, nb_negative_samples=6.):
 
 def save_weights(model, index2word, vocab_size, vec_dim):
     # save weights
-    # filename = datetime.now().strftime('vectors_%Y-%m-%d_%H:%M:%S.txt')
     vec = model.get_weights()[0]
-    f = open('vectors_embedding.txt', 'w')
+    f = open(filename, 'w')
     f.write(" ".join([str(vocab_size), str(vec_dim)]))
     f.write("\n")
     for i, word in index2word.items():
@@ -121,6 +94,6 @@ def most_similar(positive=[], negative=[]):
     :return:
     """
     from gensim import models
-    vec = models.word2vec.Word2Vec.load_word2vec_format('vectors_embedding.txt', binary=False)
+    vec = models.word2vec.Word2Vec.load_word2vec_format(filename, binary=False)
     for v in vec.most_similar_cosmul(positive=positive, negative=negative, topn=20):
         print(v)
