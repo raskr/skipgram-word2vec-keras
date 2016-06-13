@@ -1,11 +1,9 @@
+# -*- coding: utf-8 -*-
 from keras.layers import Input, merge, Activation, Dense
 from keras.models import Model
 import utils
 import numpy as np
 import theano.tensor as T
-
-# model in skipgram_dot.py use `Dense` instead of `Embedding`.
-# This may be so slow
 
 
 def batch_generator(n_batch, b_size, vocab_size, data_pvt, data_ctx, data_lbl):
@@ -26,13 +24,13 @@ def batch_generator(n_batch, b_size, vocab_size, data_pvt, data_ctx, data_lbl):
             yield ([pvt_dst, ctx_dst], lbl)
 
 # load data
-sentences, index2word, word2index = utils.load_sentences_brown(nb_sentences=10000)
+sentences, index2word, word2index = utils.load_sentences_brown()
 
 # params
-nb_epoch = 3
-batch_size = 100
+nb_epoch = 10
+batch_size = 10000
 vec_dim = 128
-window_size = 5 # half of window exactly
+window_size = 7
 vocab_size = len(index2word)
 
 # create input
@@ -55,8 +53,8 @@ embedded_ctx = Dense(input_dim=vocab_size,
                      output_dim=vec_dim)(input_ctx)
 
 merged = merge(inputs=[embedded_pvt, embedded_ctx],
-               # mode=lambda a: (a[0] * a[1]).sum(-1).reshape((batch_size, 1)),
-               mode=lambda x: T.tensordot(x[0], x[1]),
+               # mode=lambda a: (a[0]*a[1]).sum(-1).reshape((batch_size, 1)),
+               mode=lambda a: T.tensordot(a[0], a[1]),
                output_shape=(batch_size, 1))
 
 predictions = Activation('sigmoid')(merged)
@@ -74,4 +72,5 @@ model.fit_generator(generator=gen,
 utils.save_weights(model, index2word, vocab_size, vec_dim)
 
 # eval using gensim
-utils.most_similar(positive=['she', 'him'], negative=['he']) #=> 'her'
+utils.most_similar(positive=['she', 'him'], negative=['he'])
+

@@ -16,13 +16,13 @@ def batch_generator(n_batch, b_size, data_pvt, data_ctx, data_lbl):
 
 
 # load data
-sentences, index2word, word2index = utils.load_sentences_brown(nb_sentences=10000)
+sentences, index2word, word2index = utils.load_sentences_brown()
 
 # params
-nb_epoch = 3
-batch_size = 10000
+nb_epoch = 10
+batch_size = 10000 # learn 10000 `words` at a time
 vec_dim = 128
-window_size = 5 # half of window exactly
+window_size = 7
 vocab_size = len(index2word)
 
 # create input
@@ -64,4 +64,4 @@ model.fit_generator(generator=gen,
 utils.save_weights(model, index2word, vocab_size, vec_dim)
 
 # eval using gensim
-utils.most_similar(positive=['she', 'him'], negative=['he'])
+utils.most_similar(positive=['she', 'him'], negative=['he']) #=> 'her'

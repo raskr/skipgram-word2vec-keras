@@ -11,7 +11,7 @@ def load_sentences_brown(nb_sentences=None):
     index2word = {}
     word2index = {}
     sentences = []
-    stop_words = ['the', 'in', 'to', 'for', 'of', ',', '.', '"']
+    stop_words = ['the', 'in', 'to', 'or', 'and', 'for', 'of']
 
     sents = brown.sents()[:nb_sentences] if nb_sentences else brown.sents()
     for sent in sents:
