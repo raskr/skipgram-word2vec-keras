@@ -1,7 +1,7 @@
 import utils
 
-print 'she - he + him...'
-utils.most_similar(positive=['she', 'him'], negative=['he'])
+# print 'she - he + him...'
+# utils.most_similar(positive=['she', 'him'], negative=['he'])
 
-print 'life'
-utils.most_similar(positive=['life'])
+print 'be'
+utils.most_similar(positive=['be'])

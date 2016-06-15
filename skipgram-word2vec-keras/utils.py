@@ -1,7 +1,7 @@
 filename = 'vectors_embedding.txt'
 
 
-def load_sentences_brown(min_count=5, nb_sentences=None):
+def load_sentences_brown(min_count=2, nb_sentences=None):
     """
     :param min_count: I remove less-frequent words than this value
     :param nb_sentences: Use if all brown sentences are too many
@@ -53,25 +53,7 @@ def skip_grams(sentences, window, vocab_size, nb_negative_samples=6.):
         couples.extend(cpl)
         labels.extend(lbl)
 
-    return couples, labels
-
-
-def create_input(x, y, b_size):
-    """
-    :param x: Output from skip_grams(). i.e. [[1, 2], [1, 3], [2, 1], ...]
-    :param y: Output from skip_grams(). i.e. [ 1, 0, 1, ...]
-    :param b_size: size of one batch
-    :return: Three numpy arrays. Each of them has same shape like (n,)
-    """
-    import numpy as np
-
-    garbage = len(x) % b_size
-
-    pivot = np.array(x)[:, 0][:-garbage]
-    ctx = np.array(x)[:, 1][:-garbage]
-    label = np.array(y)[:-garbage]
-
-    return pivot, ctx, label
+    return np.asarray(couples), np.asarray(labels)
 
 
 def save_weights(model, index2word, vec_dim):

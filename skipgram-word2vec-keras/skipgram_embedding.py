@@ -1,49 +1,44 @@
 from keras.layers import Input, merge, Activation
 from keras.models import Model
 from keras.layers.embeddings import Embedding
-import numpy as np
 import utils
 
 
-def batch_generator(cpls, lbls):
+def batch_generator(cpl, lbl):
     import random
 
+    garbage = len(labels) % batch_size
+
+    pvt = cpl[:, 0][:-garbage]
+    ctx = cpl[:, 1][:-garbage]
+    lbl = lbl[:-garbage]
+    assert pvt.shape == ctx.shape == lbl.shape
+
     while 1:
-        # pre-process before every eopch
+        # shuffle data at beginning of every epoch
         seed = random.randint(0, 10e6)
-
-        garbage = len(lbls) % batch_size
-
-        pvt = np.array(cpls)[:, 0][:-garbage]
-        ctx = np.array(cpls)[:, 1][:-garbage]
-        lbl = np.array(lbls)[:-garbage]
-
-        assert pvt.shape == ctx.shape == lbl.shape
-
         random.seed(seed)
         random.shuffle(pvt)
-
         random.seed(seed)
         random.shuffle(ctx)
-
         random.seed(seed)
         random.shuffle(lbl)
 
-        # feed batches
+        # feed batches actually
         for i in range(nb_batch):
-            a, b = batch_size*i, batch_size*(i+1)
-            yield ([pvt[a: b], ctx[a: b]], lbl[a: b])
+            begin, end = batch_size*i, batch_size*(i+1)
+            yield ([pvt[begin: end], ctx[begin: end]], lbl[begin: end])
 
 
 # load data
 # sentences: list of (list of id)
 # index2word: list of string
-sentences, index2word = utils.load_sentences_brown()
+sentences, index2word = utils.load_sentences_brown(10000)
 
 # params
 nb_epoch = 4
 # learn `batch_size words` at a time
-batch_size = 20000
+batch_size = 3000
 vec_dim = 128
 window_size = 5
 vocab_size = len(index2word)
@@ -85,7 +80,4 @@ model.fit_generator(generator=batch_generator(couples, labels),
 utils.save_weights(model, index2word, vec_dim)
 
 # eval using gensim
-# utils.most_similar(positive=['she', 'him'], negative=['he']) #=> 'her'
-# utils.most_similar(positive=['can'])
-utils.most_similar(positive=['have'])
-utils.most_similar(positive=['ever'])
+utils.most_similar(positive=['she', 'him'], negative=['he']) #=> 'her'
