@@ -7,15 +7,18 @@ import utils
 def batch_generator(cpl, lbl):
     import random
 
+    # trim the tail
     garbage = len(labels) % batch_size
 
     pvt = cpl[:, 0][:-garbage]
     ctx = cpl[:, 1][:-garbage]
     lbl = lbl[:-garbage]
+
     assert pvt.shape == ctx.shape == lbl.shape
 
+    # epoch loop
     while 1:
-        # shuffle data at beginning of every epoch
+        # shuffle data at beginning of every epoch (takes few minutes)
         seed = random.randint(0, 10e6)
         random.seed(seed)
         random.shuffle(pvt)
@@ -24,23 +27,24 @@ def batch_generator(cpl, lbl):
         random.seed(seed)
         random.shuffle(lbl)
 
-        # feed batches actually
         for i in range(nb_batch):
+            # feed i th batch
             begin, end = batch_size*i, batch_size*(i+1)
             yield ([pvt[begin: end], ctx[begin: end]], lbl[begin: end])
 
 
 # load data
-# sentences: list of (list of id)
-# index2word: list of string
-sentences, index2word = utils.load_sentences_brown(10000)
+# - sentences: list of (list of id)
+# - index2word: list of string
+sentences, index2word = utils.load_sentences_brown()
 
 # params
-nb_epoch = 4
+nb_epoch = 3
 # learn `batch_size words` at a time
-batch_size = 3000
+batch_size = 1000
 vec_dim = 128
-window_size = 5
+# half of window
+window_size = 8
 vocab_size = len(index2word)
 
 # create input
@@ -50,7 +54,7 @@ couples, labels = utils.skip_grams(sentences, window_size, vocab_size)
 nb_batch = len(labels) // batch_size
 samples_per_epoch = batch_size * nb_batch
 
-# graph definition
+# graph definition (pvt: center of window, ctx: context)
 input_pvt = Input(batch_shape=(batch_size, 1), dtype='int32')
 input_ctx = Input(batch_shape=(batch_size, 1), dtype='int32')
 
@@ -63,7 +67,7 @@ embedded_ctx = Embedding(input_dim=vocab_size,
                          input_length=1)(input_ctx)
 
 merged = merge(inputs=[embedded_pvt, embedded_ctx],
-               mode=lambda a: (a[0]*a[1]).sum(-1),
+               mode=lambda x: (x[0] * x[1]).sum(2),
                output_shape=(batch_size, 1))
 
 predictions = Activation('sigmoid')(merged)
@@ -80,4 +84,4 @@ model.fit_generator(generator=batch_generator(couples, labels),
 utils.save_weights(model, index2word, vec_dim)
 
 # eval using gensim
-utils.most_similar(positive=['she', 'him'], negative=['he']) #=> 'her'
+utils.most_similar(positive=['the'])
