@@ -28,20 +28,20 @@ def batch_generator(cpl, lbl):
         random.shuffle(lbl)
 
         for i in range(nb_batch):
-            # feed i th batch
             begin, end = batch_size*i, batch_size*(i+1)
+            # feed i th batch
             yield ([pvt[begin: end], ctx[begin: end]], lbl[begin: end])
 
 
 # load data
-# - sentences: list of (list of id)
+# - sentences: list of (list of word-id)
 # - index2word: list of string
 sentences, index2word = utils.load_sentences_brown()
 
 # params
 nb_epoch = 3
 # learn `batch_size words` at a time
-batch_size = 1000
+batch_size = 6000
 vec_dim = 128
 # half of window
 window_size = 8
@@ -49,6 +49,8 @@ vocab_size = len(index2word)
 
 # create input
 couples, labels = utils.skip_grams(sentences, window_size, vocab_size)
+print 'shape of couples: ', couples.shape
+print 'shape of labels: ', labels.shape
 
 # metrics
 nb_batch = len(labels) // batch_size
@@ -67,7 +69,7 @@ embedded_ctx = Embedding(input_dim=vocab_size,
                          input_length=1)(input_ctx)
 
 merged = merge(inputs=[embedded_pvt, embedded_ctx],
-               mode=lambda x: (x[0] * x[1]).sum(2),
+               mode=lambda x: (x[0] * x[1]).sum(-1),
                output_shape=(batch_size, 1))
 
 predictions = Activation('sigmoid')(merged)
@@ -84,4 +86,7 @@ model.fit_generator(generator=batch_generator(couples, labels),
 utils.save_weights(model, index2word, vec_dim)
 
 # eval using gensim
+print 'the....'
 utils.most_similar(positive=['the'])
+print 'she - he + him....'
+utils.most_similar(positive=['she', 'him'], negative=['he'])

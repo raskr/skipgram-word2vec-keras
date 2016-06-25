@@ -4,15 +4,15 @@ import utils
 import numpy as np
 
 
-def batch_generator(couples, labels):
+def batch_generator(cpl, lbl):
     import random
 
     # trim the tail
     garbage = len(labels) % batch_size
 
-    data_pvt = couples[:, 0][:-garbage]
-    data_ctx = couples[:, 1][:-garbage]
-    data_lbl = labels[:-garbage]
+    data_pvt = cpl[:, 0][:-garbage]
+    data_ctx = cpl[:, 1][:-garbage]
+    data_lbl = lbl[:-garbage]
 
     assert data_pvt.shape == data_ctx.shape == data_lbl.shape
 
@@ -52,7 +52,7 @@ sentences, index2word = utils.load_sentences_brown()
 # params
 nb_epoch = 3
 # learn `batch_size words` at a time
-batch_size = 1000
+batch_size = 6000
 vec_dim = 128
 # half of window
 window_size = 8
@@ -60,6 +60,8 @@ vocab_size = len(index2word)
 
 # create input
 couples, labels = utils.skip_grams(sentences, window_size, vocab_size)
+print 'shape of couples: ', couples.shape
+print 'shape of labels: ', labels.shape
 
 # metrics
 nb_batch = len(labels) // batch_size
@@ -93,4 +95,7 @@ model.fit_generator(generator=batch_generator(couples, labels),
 utils.save_weights(model, index2word, vec_dim)
 
 # eval using gensim
+print 'the....'
 utils.most_similar(positive=['the'])
+print 'she - he + him....'
+utils.most_similar(positive=['she', 'him'], negative=['he'])
